@@ -1,0 +1,2 @@
+# faso-agri-nuxt
+
