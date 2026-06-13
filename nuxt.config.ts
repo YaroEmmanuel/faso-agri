@@ -2,6 +2,9 @@
 export default defineNuxtConfig({
   devtools: { enabled: true },
 
+  // Static site generation for GitHub Pages
+  ssr: false,
+
   modules: [
     '@nuxtjs/tailwindcss',
     '@nuxtjs/google-fonts',
@@ -33,11 +36,11 @@ export default defineNuxtConfig({
       charset: 'utf-8',
       viewport: 'width=device-width, initial-scale=1',
     },
-    // Replace with your actual GitHub repository name
-    baseURL: '/<repository-name>/', 
-    
-    // Changes default '_nuxt' to 'assets' to avoid Jekyll folder removal conflicts
-    buildAssetsDir: 'public/assets/', 
+    // Nom exact du dépôt GitHub
+    baseURL: '/faso-agri/',
+
+    // Évite les conflits avec Jekyll (dossiers commençant par _)
+    buildAssetsDir: 'public/images/',
   },
 
   compatibilityDate: '2024-04-03',
