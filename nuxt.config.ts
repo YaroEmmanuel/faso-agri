@@ -24,7 +24,8 @@ export default defineNuxtConfig({
     },
   },
   image: {
-    dir: 'public',   // ← ici, au niveau racine
+    dir: 'public',
+    provider: 'none',
   },
   app: {
     head: {
