@@ -1,25 +1,18 @@
-// https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   devtools: { enabled: true },
-
-  // Static site generation for GitHub Pages
   ssr: false,
-
   modules: [
     '@nuxtjs/tailwindcss',
     '@nuxtjs/google-fonts',
     '@nuxt/image'
   ],
-
   googleFonts: {
     families: {
       'DM Sans': [400, 500, 600, 700],
     },
     display: 'swap',
   },
-
   css: [],
-
   runtimeConfig: {
     public: {
       firebaseApiKey:            process.env.NUXT_PUBLIC_FIREBASE_API_KEY            ?? '',
@@ -30,18 +23,16 @@ export default defineNuxtConfig({
       firebaseAppId:             process.env.NUXT_PUBLIC_FIREBASE_APP_ID             ?? '',
     },
   },
-
+  image: {
+    dir: 'public',   // ← ici, au niveau racine
+  },
   app: {
     head: {
       charset: 'utf-8',
       viewport: 'width=device-width, initial-scale=1',
     },
-    // Nom exact du dépôt GitHub
     baseURL: '/faso-agri/',
-
-    // Évite les conflits avec Jekyll (dossiers commençant par _)
     buildAssetsDir: '_nuxt',
   },
-
   compatibilityDate: '2024-04-03',
 })
