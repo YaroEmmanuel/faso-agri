@@ -5,8 +5,8 @@
       <!-- Logo -->
       <div>
         <NuxtLink to="/" class="flex items-center gap-2">
-          <img src="/faso-agri/images/logo.png" alt="logo faso agri" class="h-12 w-12" />
-          <!-- <NuxtImg src="/images/logo.png" alt="logo faso agri" class="h-12 w-12" /> -->
+          <!-- <img src="/faso-agri/images/logo.png" alt="logo faso agri" class="h-12 w-12" /> -->
+          <NuxtImg src="/faso-agri/images/logo.png" alt="logo faso agri" class="h-12 w-12" />
           <span class="text-lg font-bold text-black hidden md:block">
             Faso Agri
           </span>

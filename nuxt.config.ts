@@ -25,7 +25,7 @@ export default defineNuxtConfig({
   },
   image: {
     dir: 'public',
-    provider: 'none',
+    provider: 'ipx',
   },
   app: {
     head: {
