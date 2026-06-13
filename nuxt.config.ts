@@ -40,7 +40,7 @@ export default defineNuxtConfig({
     baseURL: '/faso-agri-nuxt/',
 
     // Évite les conflits avec Jekyll (dossiers commençant par _)
-    buildAssetsDir: 'public/images/',
+    buildAssetsDir: '_nuxt',
   },
 
   compatibilityDate: '2024-04-03',
