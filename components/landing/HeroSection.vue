@@ -56,7 +56,6 @@
 </template>
 
 <script setup lang="ts">
-import { useRuntimeConfig } from 'nuxt/kit'
 import { ref, onMounted, onUnmounted } from 'vue'
 
 const stats = [
@@ -65,13 +64,10 @@ const stats = [
   { value: '100%', label: 'Gratuit' },
 ]
 
-const config = useRuntimeConfig()
-const base = config.app.baseURL  // '/faso-agri/'
-
 const screenshots = [
-  `${base}images/screenshot1.jpeg`,
-  `${base}images/screenshot1.jpeg`,
-  `${base}images/screenshot1.jpeg`,
+  '/faso-agri/images/screenshot1.jpeg',
+  '/faso-agri/images/screenshot1.jpeg',
+  '/faso-agri/images/screenshot1.jpeg',
 ]
 
 const currentIndex = ref(0)
