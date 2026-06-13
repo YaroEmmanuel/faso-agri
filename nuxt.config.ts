@@ -37,7 +37,7 @@ export default defineNuxtConfig({
       viewport: 'width=device-width, initial-scale=1',
     },
     // Nom exact du dépôt GitHub
-    baseURL: '/faso-agri-nuxt/',
+    baseURL: '/faso-agri/',
 
     // Évite les conflits avec Jekyll (dossiers commençant par _)
     buildAssetsDir: '_nuxt',
