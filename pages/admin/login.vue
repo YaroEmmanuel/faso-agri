@@ -81,7 +81,7 @@
 
         </form>
 
-        <!-- Initialisation du compte Admin par défaut -->
+        <!-- Initialisation du compte Admin par défaut
         <div class="mt-6 pt-6 border-t border-gray-100 text-center">
           <button
             @click="initializeDefaultAdmin"
@@ -103,6 +103,7 @@
             {{ initMessage }}
           </p>
         </div>
+        -->
 
       </div>
 

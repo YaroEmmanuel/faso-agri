@@ -6,9 +6,9 @@
       <NuxtLink to="/confidentialite" class="hover:text-white/70 transition-colors">
         Confidentialités
       </NuxtLink>
-      <NuxtLink to="/admin" class="hover:text-white/70 transition-colors">
+      <!-- <NuxtLink to="/admin" class="hover:text-white/70 transition-colors">
         Admin
-      </NuxtLink>
+      </NuxtLink> -->
     </div>
   </footer>
 </template>
