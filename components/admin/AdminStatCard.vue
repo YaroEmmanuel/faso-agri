@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col gap-4">
+  <div class="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.015)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-0.5 transition-all duration-300">
     <div v-if="loading" class="space-y-3">
       <div class="h-3 w-20 bg-gray-100 rounded-full animate-pulse" />
       <div class="h-8 w-24 bg-gray-100 rounded-full animate-pulse" />
