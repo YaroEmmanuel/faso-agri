@@ -103,6 +103,36 @@
               </td>
               <td class="px-6 py-4 text-right">
                 <div class="flex items-center justify-end gap-1.5">
+                  <button
+                    v-if="item.status === 'pending'"
+                    @click="updateItemStatus(item, 'active')"
+                    title="Approuver & Activer"
+                    class="p-1.5 rounded-lg hover:bg-green-50 text-gray-400 hover:text-green-600 transition"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                  </button>
+                  <button
+                    v-if="item.status === 'active' && activeTab === 'products'"
+                    @click="updateItemStatus(item, 'inactive')"
+                    title="Désactiver"
+                    class="p-1.5 rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-600 transition"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                    </svg>
+                  </button>
+                  <button
+                    v-if="item.status === 'active' && activeTab === 'announcements'"
+                    @click="updateItemStatus(item, 'expired')"
+                    title="Marquer comme expiré"
+                    class="p-1.5 rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-600 transition"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                  </button>
                   <button @click="openEditor(item)" title="Modifier" class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
@@ -366,6 +396,21 @@ async function saveItem() {
   } catch (e) {
     console.error('[Save Item Error]', e)
     alert("Une erreur est survenue lors de la modification de l'élément.")
+  }
+}
+
+async function updateItemStatus(item: any, newStatus: string) {
+  const col = activeTab.value === 'products' ? 'products' : 'announcements'
+  try {
+    if ($firestore) {
+      const { doc, updateDoc } = await import('firebase/firestore')
+      const fs = $firestore as any
+      await updateDoc(doc(fs, col, item.id), { status: newStatus })
+    }
+    item.status = newStatus
+  } catch (e) {
+    console.error('[Update Item Status Error]', e)
+    alert("Une erreur est survenue lors du changement de statut.")
   }
 }
 

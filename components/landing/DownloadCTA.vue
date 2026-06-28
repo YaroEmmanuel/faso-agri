@@ -18,7 +18,7 @@
         </a>
 
         <!-- APK direct -->
-        <a href="#" class="bg-white px-5 py-3 rounded-xl flex items-center gap-2.5 hover:opacity-90 transition-opacity">
+        <a href="/downloads/faso-agri-beta.apk" download="faso-agri-beta.apk" class="bg-white px-5 py-3 rounded-xl flex items-center gap-2.5 hover:opacity-90 transition-opacity">
           <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="1.5">
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
           </svg>

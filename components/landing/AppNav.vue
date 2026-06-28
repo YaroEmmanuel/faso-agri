@@ -21,9 +21,9 @@
           <a href="#contact" class="hover:text-primary">Contact</a>
         </div>
 
-        <button class="bg-primary text-white px-5 py-2 rounded-md text-sm hover:bg-secondary transition-colors duration-300">
+        <a href="#download" class="bg-primary text-white px-5 py-2 rounded-md text-sm hover:bg-secondary transition-colors duration-300 inline-block">
           Télécharger
-        </button>
+        </a>
       </div>
 
     </div>

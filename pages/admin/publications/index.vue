@@ -47,6 +47,13 @@
           <option value="Santé animale">Santé animale</option>
           <option value="Gestion">Gestion</option>
         </select>
+        <select v-model="filterStatus"
+          class="px-4 py-2 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition">
+          <option value="">Tous les statuts</option>
+          <option value="published">Publié</option>
+          <option value="draft">Brouillon</option>
+          <option value="archived">Archivé</option>
+        </select>
       </div>
 
       <!-- Liste -->
@@ -65,6 +72,9 @@
                 <span v-if="info.category" class="text-xs px-2.5 py-0.5 rounded-full font-medium bg-green-50 text-green-700">
                   {{ info.category }}
                 </span>
+                <span :class="statusBadge(info.status ?? 'published')" class="text-xs px-2.5 py-0.5 rounded-full font-medium">
+                  {{ statusLabel(info.status ?? 'published') }}
+                </span>
                 <span class="inline-flex items-center gap-1 text-xs text-gray-400">
                   <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -72,7 +82,9 @@
                   {{ info.readMinutes ?? 3 }} min de lecture
                 </span>
               </div>
-              <p class="font-medium text-gray-900 line-clamp-1">{{ info.title }}</p>
+              <NuxtLink :to="`/admin/publications/${info.id}`" class="font-medium text-gray-900 line-clamp-1 hover:text-primary transition block">
+                {{ info.title }}
+              </NuxtLink>
               <p class="text-xs text-gray-400 mt-0.5">
                 <span class="font-medium text-gray-500">{{ info.author || 'Auteur inconnu' }}</span>
                 · {{ formatDate(info.createdAt) }}
@@ -82,6 +94,27 @@
               </p>
             </div>
             <div class="flex items-center gap-1 flex-shrink-0">
+              <button
+                v-if="(info.status ?? 'published') !== 'published'"
+                @click="updateStatus(info, 'published')"
+                title="Publier"
+                class="p-2 rounded-lg hover:bg-green-50 text-gray-400 hover:text-green-600 transition"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+              </button>
+              <button
+                v-if="(info.status ?? 'published') === 'published'"
+                @click="updateStatus(info, 'archived')"
+                title="Archiver"
+                class="p-2 rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-600 transition"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                </svg>
+              </button>
               <button @click="openEditor(info)" title="Modifier" class="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
@@ -147,8 +180,8 @@
                 class="w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition resize-none" />
             </div>
 
-            <!-- Catégorie + Auteur -->
-            <div class="grid grid-cols-2 gap-3">
+            <!-- Catégorie + Auteur + Statut -->
+            <div class="grid grid-cols-3 gap-3">
               <div>
                 <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Catégorie</label>
                 <select v-model="form.category"
@@ -166,6 +199,15 @@
                 <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Auteur</label>
                 <input v-model="form.author" type="text" placeholder="Ex: Dr. Ouédraogo"
                   class="w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition" />
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Statut</label>
+                <select v-model="form.status"
+                  class="w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition">
+                  <option value="published">Publié</option>
+                  <option value="draft">Brouillon</option>
+                  <option value="archived">Archivé</option>
+                </select>
               </div>
             </div>
 
@@ -222,6 +264,7 @@ const loading     = ref(false)
 const loadError   = ref('')
 const search      = ref('')
 const filterCategory = ref('')
+const filterStatus = ref('')
 
 const filteredInfos = computed(() =>
   infos.value.filter(i => {
@@ -231,7 +274,8 @@ const filteredInfos = computed(() =>
       (i.author ?? '').toLowerCase().includes(term) ||
       (i.tags ?? []).some((t: string) => t.toLowerCase().includes(term))
     const matchCat = !filterCategory.value || i.category === filterCategory.value
-    return matchSearch && matchCat
+    const matchStatus = !filterStatus.value || (i.status ?? 'published') === filterStatus.value
+    return matchSearch && matchCat && matchStatus
   })
 )
 
@@ -247,7 +291,8 @@ const defaultForm = () => ({
   category: '',
   author: 'Administrateur',
   tagsInput: '',
-  readMinutes: 3
+  readMinutes: 3,
+  status: 'published'
 })
 const form = reactive(defaultForm())
 
@@ -261,6 +306,7 @@ function openEditor(info?: any) {
     form.author      = info.author ?? ''
     form.tagsInput   = (info.tags ?? []).join(', ')
     form.readMinutes = info.readMinutes ?? 3
+    form.status      = info.status ?? 'published'
   } else {
     Object.assign(form, defaultForm())
   }
@@ -284,6 +330,7 @@ async function save() {
       author:      form.author,
       tags,
       readMinutes: form.readMinutes ?? 3,
+      status:      form.status ?? 'published',
     }
 
     if ($firestore) {
@@ -331,6 +378,38 @@ function formatDate(ts: any) {
   if (!ts) return '—'
   const d = ts.toDate ? ts.toDate() : new Date(ts)
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+async function updateStatus(info: any, newStatus: 'published' | 'draft' | 'archived') {
+  try {
+    if ($firestore) {
+      const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore')
+      const fs = $firestore as any
+      await updateDoc(doc(fs, COLLECTION, info.id), { status: newStatus, updatedAt: serverTimestamp() })
+    }
+    info.status = newStatus
+  } catch (e: any) {
+    console.error('[Infos Pratiques] Update status error:', e)
+    alert("Erreur lors de la mise à jour du statut : " + (e.message ?? 'erreur inconnue'))
+  }
+}
+
+function statusBadge(s: string) {
+  const map: Record<string, string> = {
+    published: 'bg-green-50 text-green-700 border border-green-200',
+    draft: 'bg-gray-100 text-gray-500 border border-gray-200',
+    archived: 'bg-red-50 text-red-700 border border-red-200'
+  }
+  return map[s] ?? 'bg-green-50 text-green-700 border border-green-200'
+}
+
+function statusLabel(s: string) {
+  const map: Record<string, string> = {
+    published: 'Publié',
+    draft: 'Brouillon',
+    archived: 'Archivé'
+  }
+  return map[s] ?? 'Publié'
 }
 
 function exportCsv() {
