@@ -72,13 +72,14 @@
               <th class="text-left px-6 py-3.5 font-semibold">{{ activeTab === 'products' ? 'Marché Agricole' : 'Événement' }}</th>
               <th class="text-left px-6 py-3.5 font-semibold hidden md:table-cell">{{ activeTab === 'products' ? 'Catégorie' : 'Type' }}</th>
               <th class="text-left px-6 py-3.5 font-semibold hidden lg:table-cell">Province / Lieu</th>
-              <th class="text-left px-6 py-3.5 font-semibold hidden lg:table-cell">Auteur</th>
+              <th class="text-left px-6 py-3.5 font-semibold hidden xl:table-cell">Auteur</th>
+              <th class="text-left px-6 py-3.5 font-semibold hidden lg:table-cell">Publication</th>
               <th class="text-left px-6 py-3.5 font-semibold">Statut</th>
               <th class="text-right px-6 py-3.5 font-semibold">Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="item in filteredItems" :key="item.id" class="border-b border-gray-100/50 last:border-0 hover:bg-gray-50/40 transition">
+            <tr v-for="item in paginatedItems" :key="item.id" class="border-b border-gray-100/50 last:border-0 hover:bg-gray-50/40 transition">
               <td class="px-6 py-4">
                 <div class="flex items-center gap-3">
                   <div class="w-10 h-10 rounded-xl bg-gray-100 flex-shrink-0 overflow-hidden flex items-center justify-center border border-gray-100/80">
@@ -97,7 +98,10 @@
                 {{ activeTab === 'products' ? productCategoryLabel(item.category) : announcementTypeLabel(item.type) }}
               </td>
               <td class="px-6 py-4 text-gray-400 hidden lg:table-cell">{{ item.province || item.location || '—' }}</td>
-              <td class="px-6 py-4 text-gray-400 hidden lg:table-cell">{{ item.authorName || '—' }}</td>
+              <td class="px-6 py-4 text-gray-400 hidden xl:table-cell">{{ item.authorName || '—' }}</td>
+              <td class="px-6 py-4 hidden lg:table-cell">
+                <span class="text-xs text-gray-500 font-medium">{{ formatDate(item.createdAt) }}</span>
+              </td>
               <td class="px-6 py-4">
                 <span :class="statusBadge(item.status)" class="text-xs px-2.5 py-1 rounded-full font-medium">{{ statusLabel(item.status) }}</span>
               </td>
@@ -138,7 +142,17 @@
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                     </svg>
                   </button>
-                  <button @click="deleteItem(item)" title="Supprimer" class="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition">
+                  <button
+                    v-if="isSuperAdmin"
+                    @click="askDeleteItem(item)" title="Supprimer" class="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                  </button>
+                  <button
+                    v-else
+                    disabled
+                    class="p-1.5 rounded-lg text-gray-300 cursor-not-allowed transition" title="Seul un super admin peut supprimer">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                     </svg>
@@ -146,11 +160,52 @@
                 </div>
               </td>
             </tr>
-            <tr v-if="filteredItems.length === 0">
-              <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-400">Aucun élément trouvé.</td>
+            <tr v-if="paginatedItems.length === 0">
+              <td colspan="7" class="px-6 py-10 text-center text-sm text-gray-400">Aucun élément trouvé.</td>
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Pagination stepper -->
+      <div class="flex items-center justify-between text-sm text-gray-400">
+        <span>Page {{ currentPage }} / {{ totalPages }} · <strong class="text-gray-600">{{ filteredItems.length }}</strong> élément{{ filteredItems.length !== 1 ? 's' : '' }}</span>
+        <div class="flex items-center gap-1.5">
+          <button
+            @click="currentPage = 1"
+            :disabled="currentPage === 1"
+            class="p-2 rounded-xl border border-gray-200 hover:border-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition text-gray-500"
+            title="Première page"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
+          </button>
+          <button
+            @click="currentPage--"
+            :disabled="currentPage === 1"
+            class="px-3.5 py-1.5 rounded-xl border border-gray-200 hover:border-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition text-gray-600"
+          >Préc.</button>
+          <div class="flex gap-1">
+            <button
+              v-for="p in visiblePages" :key="p"
+              @click="typeof p === 'number' && (currentPage = p)"
+              :class="p === currentPage ? 'bg-primary text-white border-primary' : p === '...' ? 'border-transparent text-gray-400 cursor-default' : 'border-gray-200 text-gray-600 hover:border-gray-300'"
+              class="w-8 h-8 rounded-xl border text-xs font-medium transition"
+            >{{ p }}</button>
+          </div>
+          <button
+            @click="currentPage++"
+            :disabled="currentPage === totalPages"
+            class="px-3.5 py-1.5 rounded-xl border border-gray-200 hover:border-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition text-gray-600"
+          >Suiv.</button>
+          <button
+            @click="currentPage = totalPages"
+            :disabled="currentPage === totalPages"
+            class="p-2 rounded-xl border border-gray-200 hover:border-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition text-gray-500"
+            title="Dernière page"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+          </button>
+        </div>
       </div>
 
       <!-- Error -->
@@ -297,6 +352,15 @@
       </div>
 
     </div>
+
+    <AdminConfirmModal
+      :isOpen="deleteModalOpen"
+      :loading="deleting"
+      title="Supprimer cet élément ?"
+      @close="deleteModalOpen = false"
+      @confirm="confirmDeleteItem"
+    />
+
   </AdminLayout>
 </template>
 
@@ -304,6 +368,8 @@
 const { $firestore } = useNuxtApp()
 definePageMeta({ middleware: 'admin' })
 useSeoMeta({ title: 'Catalogue — Admin Faso Agri' })
+
+const { isSuperAdmin } = useAdminAuth()
 
 function productCategoryLabel(cat: string) {
   const m: Record<string, string> = {
@@ -331,6 +397,10 @@ function announcementTypeLabel(type: string) {
 
 const editorOpen = ref(false)
 const editingItem = ref<any>(null)
+
+const deleteModalOpen = ref(false)
+const itemToDelete = ref<any>(null)
+const deleting = ref(false)
 
 const editForm = reactive({
   title: '',
@@ -414,19 +484,30 @@ async function updateItemStatus(item: any, newStatus: string) {
   }
 }
 
-async function deleteItem(item: any) {
-  if (!confirm(`Supprimer définitivement cet élément (${item.title || 'sans titre'}) ?`)) return
+function askDeleteItem(item: any) {
+  if (!isSuperAdmin.value) return
+  itemToDelete.value = item
+  deleteModalOpen.value = true
+}
+
+async function confirmDeleteItem() {
+  if (!itemToDelete.value) return
+  deleting.value = true
   try {
     if ($firestore) {
       const { doc, deleteDoc } = await import('firebase/firestore')
       const fs = $firestore as any
       const col = activeTab.value === 'products' ? 'products' : 'announcements'
-      await deleteDoc(doc(fs, col, item.id))
+      await deleteDoc(doc(fs, col, itemToDelete.value.id))
     }
-    items.value = items.value.filter(i => i.id !== item.id)
+    items.value = items.value.filter(i => i.id !== itemToDelete.value.id)
+    deleteModalOpen.value = false
   } catch (e) {
     console.error('[Delete Item Error]', e)
     alert("Une erreur est survenue lors de la suppression.")
+  } finally {
+    deleting.value = false
+    itemToDelete.value = null
   }
 }
 
@@ -462,6 +543,9 @@ const loading        = ref(false)
 const loadError      = ref('')
 const items          = ref<any[]>([])
 
+const PAGE_SIZE = 15
+const currentPage = ref(1)
+
 const filteredItems = computed(() => {
   const term = search.value.toLowerCase()
   return items.value.filter(i => {
@@ -473,6 +557,26 @@ const filteredItems = computed(() => {
     return matchSearch && matchCat && matchStatus && matchProvince
   })
 })
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredItems.value.length / PAGE_SIZE)))
+const paginatedItems = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE
+  return filteredItems.value.slice(start, start + PAGE_SIZE)
+})
+
+const visiblePages = computed(() => {
+  const total = totalPages.value
+  const cur   = currentPage.value
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  const pages: (number | string)[] = [1]
+  if (cur > 3) pages.push('...')
+  for (let i = Math.max(2, cur - 1); i <= Math.min(total - 1, cur + 1); i++) pages.push(i)
+  if (cur < total - 2) pages.push('...')
+  pages.push(total)
+  return pages
+})
+
+watch(filteredItems, () => { currentPage.value = 1 })
 
 function statusBadge(s: string) {
   const m: Record<string,string> = {

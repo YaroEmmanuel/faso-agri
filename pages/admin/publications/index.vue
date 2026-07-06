@@ -63,7 +63,7 @@
         </div>
 
         <div
-          v-for="info in filteredInfos" :key="info.id"
+          v-for="info in paginatedInfos" :key="info.id"
           class="bg-white rounded-2xl border border-gray-100 p-5 shadow-[0_8px_30px_rgb(0,0,0,0.012)] hover:border-primary/20 hover:shadow-[0_8px_30px_rgb(0,0,0,0.035)] hover:-translate-y-0.5 transition-all duration-300"
         >
           <div class="flex items-start justify-between gap-4">
@@ -85,10 +85,13 @@
               <NuxtLink :to="`/admin/publications/${info.id}`" class="font-medium text-gray-900 line-clamp-1 hover:text-primary transition block">
                 {{ info.title }}
               </NuxtLink>
-              <p class="text-xs text-gray-400 mt-0.5">
+              <p class="text-xs text-gray-400 mt-0.5 flex items-center gap-2 flex-wrap">
                 <span class="font-medium text-gray-500">{{ info.author || 'Auteur inconnu' }}</span>
-                · {{ formatDate(info.createdAt) }}
-                <span v-if="info.tags?.length" class="ml-1">
+                <span class="flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                  {{ formatDate(info.createdAt) }}
+                </span>
+                <span v-if="info.tags?.length">
                   · {{ info.tags.slice(0, 3).join(', ') }}
                 </span>
               </p>
@@ -120,7 +123,17 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                 </svg>
               </button>
-              <button @click="deleteInfo(info.id)" title="Supprimer" class="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition">
+              <button
+                v-if="isSuperAdmin"
+                @click="askDeleteInfo(info.id)" title="Supprimer" class="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+              </button>
+              <button
+                v-else
+                disabled
+                class="p-2 rounded-lg text-gray-300 cursor-not-allowed transition" title="Seul un super admin peut supprimer">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                 </svg>
@@ -130,6 +143,31 @@
         </div>
 
         <p v-if="!loading && filteredInfos.length === 0" class="text-center text-sm text-gray-400 py-10">Aucune info pratique trouvée.</p>
+      </div>
+
+      <!-- Pagination stepper -->
+      <div v-if="totalPages > 1" class="flex items-center justify-between text-sm text-gray-400">
+        <span>Page {{ currentPage }} / {{ totalPages }} · <strong class="text-gray-600">{{ filteredInfos.length }}</strong> résultat{{ filteredInfos.length !== 1 ? 's' : '' }}</span>
+        <div class="flex items-center gap-1.5">
+          <button @click="currentPage = 1" :disabled="currentPage === 1"
+            class="p-2 rounded-xl border border-gray-200 hover:border-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition text-gray-500" title="Première page">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
+          </button>
+          <button @click="currentPage--" :disabled="currentPage === 1"
+            class="px-3.5 py-1.5 rounded-xl border border-gray-200 hover:border-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition text-gray-600">Préc.</button>
+          <div class="flex gap-1">
+            <button v-for="p in visiblePages" :key="p"
+              @click="typeof p === 'number' && (currentPage = p)"
+              :class="p === currentPage ? 'bg-primary text-white border-primary' : p === '...' ? 'border-transparent text-gray-400 cursor-default' : 'border-gray-200 text-gray-600 hover:border-gray-300'"
+              class="w-8 h-8 rounded-xl border text-xs font-medium transition">{{ p }}</button>
+          </div>
+          <button @click="currentPage++" :disabled="currentPage === totalPages"
+            class="px-3.5 py-1.5 rounded-xl border border-gray-200 hover:border-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition text-gray-600">Suiv.</button>
+          <button @click="currentPage = totalPages" :disabled="currentPage === totalPages"
+            class="p-2 rounded-xl border border-gray-200 hover:border-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition text-gray-500" title="Dernière page">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+          </button>
+        </div>
       </div>
 
       <!-- Error -->
@@ -159,11 +197,30 @@
 
           <div class="overflow-y-auto flex-1 px-6 py-5 space-y-4">
 
-            <!-- Titre -->
+            <!-- Titre & Image -->
             <div>
               <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Titre</label>
               <input v-model="form.title" type="text" placeholder="Titre de l'info pratique"
                 class="w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition" required />
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Image de couverture</label>
+              <div class="flex items-center gap-4">
+                <div v-if="imagePreview" class="w-16 h-16 rounded-xl overflow-hidden border border-gray-200 flex-shrink-0">
+                  <img :src="imagePreview" class="w-full h-full object-cover" />
+                </div>
+                <div v-else class="w-16 h-16 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 flex-shrink-0 bg-gray-50">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                </div>
+                <div class="flex-1">
+                  <input type="file" accept="image/*" @change="onImageChange"
+                    class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition cursor-pointer" />
+                  <p class="text-xs text-gray-400 mt-1">Formats acceptés : JPG, PNG, GIF</p>
+                </div>
+              </div>
             </div>
 
             <!-- Description -->
@@ -249,6 +306,14 @@
       </div>
     </Teleport>
 
+    <AdminConfirmModal
+      :isOpen="deleteModalOpen"
+      :loading="deleting"
+      title="Supprimer l'info pratique ?"
+      @close="deleteModalOpen = false"
+      @confirm="confirmDeleteInfo"
+    />
+
   </AdminLayout>
 </template>
 
@@ -256,6 +321,8 @@
 const { $firestore } = useNuxtApp()
 definePageMeta({ middleware: 'admin' })
 useSeoMeta({ title: 'Infos Pratiques — Admin Faso Agri' })
+
+const { isSuperAdmin } = useAdminAuth()
 
 const COLLECTION = 'practical_infos'
 
@@ -279,10 +346,34 @@ const filteredInfos = computed(() =>
   })
 )
 
+const PAGE_SIZE = 15
+const currentPage = ref(1)
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredInfos.value.length / PAGE_SIZE)))
+const paginatedInfos = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE
+  return filteredInfos.value.slice(start, start + PAGE_SIZE)
+})
+const visiblePages = computed(() => {
+  const total = totalPages.value
+  const cur = currentPage.value
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  const pages: (number | string)[] = [1]
+  if (cur > 3) pages.push('...')
+  for (let i = Math.max(2, cur - 1); i <= Math.min(total - 1, cur + 1); i++) pages.push(i)
+  if (cur < total - 2) pages.push('...')
+  pages.push(total)
+  return pages
+})
+watch(filteredInfos, () => { currentPage.value = 1 })
+
 // Editor modal
 const editorOpen = ref(false)
 const editingId  = ref<string | null>(null)
 const saving     = ref(false)
+
+const deleteModalOpen = ref(false)
+const infoToDelete = ref<string | null>(null)
+const deleting = ref(false)
 
 const defaultForm = () => ({
   title: '',
@@ -296,8 +387,34 @@ const defaultForm = () => ({
 })
 const form = reactive(defaultForm())
 
-function openEditor(info?: any) {
+const imageFile = ref<File | null>(null)
+const imagePreview = ref<string | null>(null)
+
+function onImageChange(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (file) {
+    imageFile.value = file
+    imagePreview.value = URL.createObjectURL(file)
+  }
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = () => {
+      const res = reader.result as string
+      resolve(res.includes(',') ? res.split(',')[1] : res)
+    }
+    reader.onerror = e => reject(e)
+  })
+}
+
+async function openEditor(info?: any) {
   editingId.value = info?.id ?? null
+  imagePreview.value = null
+  imageFile.value = null
+
   if (info) {
     form.title       = info.title ?? ''
     form.description = info.description ?? ''
@@ -307,6 +424,16 @@ function openEditor(info?: any) {
     form.tagsInput   = (info.tags ?? []).join(', ')
     form.readMinutes = info.readMinutes ?? 3
     form.status      = info.status ?? 'published'
+
+    if (info.hasImage && $firestore) {
+      try {
+        const { collection, getDocs, query, orderBy, limit } = await import('firebase/firestore')
+        const snap = await getDocs(query(collection($firestore as any, COLLECTION, info.id, 'images'), orderBy('index'), limit(1)))
+        if (!snap.empty) {
+          imagePreview.value = 'data:image/jpeg;base64,' + snap.docs[0].data().b64
+        }
+      } catch(e) { console.error(e) }
+    }
   } else {
     Object.assign(form, defaultForm())
   }
@@ -322,7 +449,12 @@ async function save() {
       .map((t: string) => t.trim())
       .filter((t: string) => t.length > 0)
 
-    const payload = {
+    let b64Image: string | null = null
+    if (imageFile.value) {
+      b64Image = await fileToBase64(imageFile.value)
+    }
+
+    const payload: any = {
       title:       form.title,
       description: form.description,
       content:     form.content,
@@ -333,15 +465,32 @@ async function save() {
       status:      form.status ?? 'published',
     }
 
+    if (b64Image || imagePreview.value) {
+       payload.hasImage = true
+    } else {
+       payload.hasImage = false
+    }
+
     if ($firestore) {
-      const { doc, updateDoc, addDoc, collection, serverTimestamp } = await import('firebase/firestore')
+      const { doc, updateDoc, addDoc, collection, getDocs, deleteDoc, serverTimestamp } = await import('firebase/firestore')
       const fs = $firestore as any
-      if (editingId.value) {
-        await updateDoc(doc(fs, COLLECTION, editingId.value), { ...payload, updatedAt: serverTimestamp() })
-        infos.value = infos.value.map(i => i.id === editingId.value ? { ...i, ...payload } : i)
+      let docId = editingId.value
+
+      if (docId) {
+        await updateDoc(doc(fs, COLLECTION, docId), { ...payload, updatedAt: serverTimestamp() })
+        infos.value = infos.value.map(i => i.id === docId ? { ...i, ...payload } : i)
       } else {
         const ref = await addDoc(collection(fs, COLLECTION), { ...payload, createdAt: serverTimestamp() })
-        infos.value = [{ id: ref.id, ...payload, createdAt: new Date() }, ...infos.value]
+        docId = ref.id
+        infos.value = [{ id: docId, ...payload, createdAt: new Date() }, ...infos.value]
+      }
+
+      if (b64Image && docId) {
+        // Clear old images
+        const imgs = await getDocs(collection(fs, COLLECTION, docId, 'images'))
+        for (const d of imgs.docs) await deleteDoc(d.ref)
+        // Add new image
+        await addDoc(collection(fs, COLLECTION, docId, 'images'), { b64: b64Image, index: 0, createdAt: serverTimestamp() })
       }
     } else {
       // Mode démo
@@ -360,17 +509,28 @@ async function save() {
   }
 }
 
-async function deleteInfo(id: string) {
-  if (!confirm('Supprimer cette info pratique définitivement ?')) return
+function askDeleteInfo(id: string) {
+  if (!isSuperAdmin.value) return
+  infoToDelete.value = id
+  deleteModalOpen.value = true
+}
+
+async function confirmDeleteInfo() {
+  if (!infoToDelete.value) return
+  deleting.value = true
   try {
     if ($firestore) {
       const { doc, deleteDoc } = await import('firebase/firestore')
-      await deleteDoc(doc($firestore as any, COLLECTION, id))
+      await deleteDoc(doc($firestore as any, COLLECTION, infoToDelete.value))
     }
-    infos.value = infos.value.filter(i => i.id !== id)
+    infos.value = infos.value.filter(i => i.id !== infoToDelete.value)
+    deleteModalOpen.value = false
   } catch (e: any) {
     console.error('[Infos Pratiques] Delete error:', e)
     alert("Erreur lors de la suppression : " + (e.message ?? 'erreur inconnue'))
+  } finally {
+    deleting.value = false
+    infoToDelete.value = null
   }
 }
 

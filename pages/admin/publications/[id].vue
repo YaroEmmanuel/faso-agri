@@ -49,7 +49,18 @@
                 </svg>
                 Modifier
               </button>
-              <button @click="deleteInfo" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-red-200 rounded-xl text-red-500 hover:bg-red-50 transition">
+              <button
+                v-if="isSuperAdmin"
+                @click="askDeleteInfo" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-red-200 rounded-xl text-red-500 hover:bg-red-50 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+                Supprimer
+              </button>
+              <button
+                v-else
+                disabled
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-200 rounded-xl text-gray-300 cursor-not-allowed transition" title="Seul un super admin peut supprimer">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                 </svg>
@@ -154,6 +165,14 @@
       </div>
     </Teleport>
 
+    <AdminConfirmModal
+      :isOpen="deleteModalOpen"
+      :loading="deleting"
+      title="Supprimer l'info pratique ?"
+      @close="deleteModalOpen = false"
+      @confirm="confirmDeleteInfo"
+    />
+
   </AdminLayout>
 </template>
 
@@ -163,6 +182,8 @@ const route = useRoute()
 const router = useRouter()
 definePageMeta({ middleware: 'admin' })
 
+const { isSuperAdmin } = useAdminAuth()
+
 const id = route.params.id as string
 const COLLECTION = 'practical_infos'
 
@@ -171,6 +192,9 @@ const loading   = ref(false)
 const loadError = ref('')
 const editorOpen = ref(false)
 const saving     = ref(false)
+
+const deleteModalOpen = ref(false)
+const deleting = ref(false)
 
 const form = reactive({
   title: '', description: '', content: '', category: '', author: '', tagsInput: '', readMinutes: 3
@@ -211,8 +235,13 @@ async function saveEdit() {
   }
 }
 
-async function deleteInfo() {
-  if (!confirm('Supprimer cette info pratique définitivement ?')) return
+function askDeleteInfo() {
+  if (!isSuperAdmin.value) return
+  deleteModalOpen.value = true
+}
+
+async function confirmDeleteInfo() {
+  deleting.value = true
   try {
     if ($firestore) {
       const { doc, deleteDoc } = await import('firebase/firestore')
@@ -221,6 +250,8 @@ async function deleteInfo() {
     router.push('/admin/publications')
   } catch (e: any) {
     alert('Erreur : ' + (e.message ?? 'inconnue'))
+    deleting.value = false
+    deleteModalOpen.value = false
   }
 }
 

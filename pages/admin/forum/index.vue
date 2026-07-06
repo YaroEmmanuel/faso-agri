@@ -36,12 +36,16 @@
 
       <!-- Sujets / Discussions -->
       <div v-if="activeTab === 'topics'" class="space-y-3">
+        <!-- Search bar for topics -->
+        <input v-model="searchTopics" type="text" placeholder="Rechercher dans les discussions..."
+          class="w-full px-4 py-2 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition" />
+
         <div v-if="loading" class="space-y-3">
           <div v-for="i in 6" :key="i" class="h-16 bg-gray-100 rounded-xl animate-pulse" />
         </div>
 
         <div
-          v-for="topic in topics" :key="topic.id"
+          v-for="topic in paginatedTopics" :key="topic.id"
           :class="topic.reported ? 'border-red-100 bg-red-50/30 shadow-[0_8px_30px_rgb(239,68,68,0.015)]' : 'border-gray-100 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.012)]'"
           class="rounded-2xl border p-5 hover:border-primary/20 hover:shadow-[0_8px_30px_rgb(0,0,0,0.035)] hover:-translate-y-0.5 transition-all duration-300"
         >
@@ -60,10 +64,13 @@
                 <span v-if="topic.category" class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{{ topic.category }}</span>
               </div>
               <p class="font-medium text-gray-900 group-hover:text-primary transition line-clamp-1">{{ topic.title || topic.content || '(Sans titre)' }}</p>
-              <p class="text-xs text-gray-400 mt-0.5">
+              <p class="text-xs text-gray-400 mt-0.5 flex items-center gap-2 flex-wrap">
                 <span class="font-medium text-gray-500">{{ topic.authorName || 'Anonyme' }}</span>
-                · {{ topic.replies ?? topic.replyCount ?? 0 }} réponse{{ (topic.replies ?? topic.replyCount ?? 0) !== 1 ? 's' : '' }}
-                · {{ formatDate(topic.createdAt) }}
+                <span>· {{ topic.replies ?? topic.replyCount ?? 0 }} réponse{{ (topic.replies ?? topic.replyCount ?? 0) !== 1 ? 's' : '' }}</span>
+                <span class="inline-flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                  {{ formatDate(topic.createdAt) }}
+                </span>
               </p>
             </button>
             <!-- Actions -->
@@ -83,8 +90,18 @@
                 </svg>
               </button>
               <!-- Supprimer -->
-              <button @click="deleteTopic(topic.id)" title="Supprimer"
+              <button
+                v-if="isSuperAdmin"
+                @click="askDeleteTopic(topic.id)" title="Supprimer"
                 class="p-2 rounded-lg hover:bg-red-50 transition text-gray-400 hover:text-red-500">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+              </button>
+              <button
+                v-else
+                disabled
+                class="p-2 rounded-lg text-gray-300 cursor-not-allowed transition" title="Seul un super admin peut supprimer">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                 </svg>
@@ -93,7 +110,32 @@
           </div>
         </div>
 
-        <p v-if="!loading && topics.length === 0" class="text-center text-sm text-gray-400 py-10">Aucun sujet de forum.</p>
+        <p v-if="!loading && filteredTopics.length === 0" class="text-center text-sm text-gray-400 py-10">Aucun sujet de forum.</p>
+
+        <!-- Pagination -->
+        <div v-if="topicsTotalPages > 1" class="flex items-center justify-between text-sm text-gray-400">
+          <span>Page {{ topicsPage }} / {{ topicsTotalPages }} · <strong class="text-gray-600">{{ filteredTopics.length }}</strong> sujet{{ filteredTopics.length !== 1 ? 's' : '' }}</span>
+          <div class="flex items-center gap-1.5">
+            <button @click="topicsPage = 1" :disabled="topicsPage === 1"
+              class="p-2 rounded-xl border border-gray-200 hover:border-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition text-gray-500" title="Première page">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
+            </button>
+            <button @click="topicsPage--" :disabled="topicsPage === 1"
+              class="px-3.5 py-1.5 rounded-xl border border-gray-200 hover:border-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition text-gray-600">Préc.</button>
+            <div class="flex gap-1">
+              <button v-for="p in topicsVisiblePages" :key="p"
+                @click="typeof p === 'number' && (topicsPage = p)"
+                :class="p === topicsPage ? 'bg-primary text-white border-primary' : p === '...' ? 'border-transparent text-gray-400 cursor-default' : 'border-gray-200 text-gray-600 hover:border-gray-300'"
+                class="w-8 h-8 rounded-xl border text-xs font-medium transition">{{ p }}</button>
+            </div>
+            <button @click="topicsPage++" :disabled="topicsPage === topicsTotalPages"
+              class="px-3.5 py-1.5 rounded-xl border border-gray-200 hover:border-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition text-gray-600">Suiv.</button>
+            <button @click="topicsPage = topicsTotalPages" :disabled="topicsPage === topicsTotalPages"
+              class="p-2 rounded-xl border border-gray-200 hover:border-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition text-gray-500" title="Dernière page">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Signalements -->
@@ -105,8 +147,16 @@
               <p class="text-sm text-gray-800 line-clamp-2">{{ item.content ?? item.title ?? '(Contenu vide)' }}</p>
               <p class="text-xs text-gray-400 mt-1">{{ item.authorName ?? 'Anonyme' }} · {{ formatDate(item.createdAt) }}</p>
             </div>
-            <button @click="deleteReported(item)"
+            <button
+              v-if="isSuperAdmin"
+              @click="askDeleteReported(item)"
               class="text-xs text-red-500 hover:text-red-700 border border-red-200 rounded-lg px-3 py-1.5 hover:bg-red-50 transition flex-shrink-0">
+              Supprimer
+            </button>
+            <button
+              v-else
+              disabled
+              class="text-xs text-gray-300 border border-gray-200 rounded-lg px-3 py-1.5 cursor-not-allowed transition flex-shrink-0" title="Seul un super admin peut supprimer">
               Supprimer
             </button>
           </div>
@@ -203,11 +253,18 @@
                       </div>
                       <!-- Supprimer réponse -->
                       <button
-                        @click="deleteReply(drawer.topic?.id, reply.id)"
+                        v-if="isSuperAdmin"
+                        @click="askDeleteReply(drawer.topic?.id, reply.id)"
                         class="mt-1 ml-1 text-[11px] text-gray-400 hover:text-red-500 transition"
                       >
                         Supprimer
                       </button>
+                      <span
+                        v-else
+                        class="mt-1 ml-1 text-[11px] text-gray-300 cursor-not-allowed transition inline-block" title="Seul un super admin peut supprimer"
+                      >
+                        Supprimer
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -225,8 +282,16 @@
             </button>
             <div class="flex-1" />
             <button
-              @click="deleteTopic(drawer.topic?.id); drawer.open = false"
+              v-if="isSuperAdmin"
+              @click="askDeleteTopic(drawer.topic?.id, true)"
               class="px-3 py-2 text-sm border border-red-200 rounded-xl text-red-500 hover:bg-red-50 transition"
+            >
+              Supprimer le sujet
+            </button>
+            <button
+              v-else
+              disabled
+              class="px-3 py-2 text-sm border border-gray-200 rounded-xl text-gray-300 cursor-not-allowed transition" title="Seul un super admin peut supprimer"
             >
               Supprimer le sujet
             </button>
@@ -235,6 +300,14 @@
       </Transition>
     </Teleport>
 
+    <AdminConfirmModal
+      :isOpen="deleteModalOpen"
+      :loading="deleting"
+      :title="deleteModalTitle"
+      @close="deleteModalOpen = false"
+      @confirm="confirmDeleteAction"
+    />
+
   </AdminLayout>
 </template>
 
@@ -242,6 +315,8 @@
 const { $firestore } = useNuxtApp()
 definePageMeta({ middleware: 'admin' })
 useSeoMeta({ title: 'Forum — Admin Faso Agri' })
+
+const { isSuperAdmin } = useAdminAuth()
 
 const loading       = ref(false)
 const loadError     = ref('')
@@ -254,6 +329,42 @@ const tabs = computed(() => [
   { key: 'reported', label: 'Signalements', badge: reportedCount.value },
 ])
 const activeTab = ref('topics')
+
+const searchTopics = ref('')
+const PAGE_SIZE = 15
+const topicsPage = ref(1)
+
+const filteredTopics = computed(() => {
+  const term = searchTopics.value.toLowerCase()
+  if (!term) return topics.value
+  return topics.value.filter(t =>
+    (t.title ?? '').toLowerCase().includes(term) ||
+    (t.content ?? '').toLowerCase().includes(term) ||
+    (t.authorName ?? '').toLowerCase().includes(term)
+  )
+})
+const topicsTotalPages = computed(() => Math.max(1, Math.ceil(filteredTopics.value.length / PAGE_SIZE)))
+const paginatedTopics = computed(() => {
+  const start = (topicsPage.value - 1) * PAGE_SIZE
+  return filteredTopics.value.slice(start, start + PAGE_SIZE)
+})
+const topicsVisiblePages = computed(() => {
+  const total = topicsTotalPages.value
+  const cur = topicsPage.value
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  const pages: (number | string)[] = [1]
+  if (cur > 3) pages.push('...')
+  for (let i = Math.max(2, cur - 1); i <= Math.min(total - 1, cur + 1); i++) pages.push(i)
+  if (cur < total - 2) pages.push('...')
+  pages.push(total)
+  return pages
+})
+watch(filteredTopics, () => { topicsPage.value = 1 })
+
+const deleteModalOpen = ref(false)
+const deleting = ref(false)
+const deleteModalTitle = ref("Supprimer cet élément ?")
+const deletePayload = ref<any>(null)
 
 // ── Drawer ──────────────────────────────────────────────────────────────────
 const drawer = reactive({
@@ -313,7 +424,6 @@ async function toggleClose() {
 }
 
 async function deleteReply(topicId: string, replyId: string) {
-  if (!confirm('Supprimer cette réponse ?')) return
   if ($firestore) {
     const { doc, deleteDoc } = await import('firebase/firestore')
     await deleteDoc(doc($firestore as any, 'discussions', topicId, 'replies', replyId))
@@ -353,7 +463,6 @@ async function closeTopic(topic: any) {
 
 async function deleteTopic(id: string) {
   if (!id) return
-  if (!confirm('Supprimer ce sujet définitivement ?')) return
   if ($firestore) {
     const { doc, deleteDoc } = await import('firebase/firestore')
     await deleteDoc(doc($firestore as any, 'discussions', id))
@@ -361,14 +470,57 @@ async function deleteTopic(id: string) {
   topics.value = topics.value.filter(t => t.id !== id)
 }
 
-async function deleteReported(item: any) {
-  if (!confirm('Supprimer ce contenu ?')) return
+async function deleteReportedItem(item: any) {
   if ($firestore) {
     const { doc, deleteDoc } = await import('firebase/firestore')
     const col = item.type === 'topic' ? 'discussions' : 'replies'
     await deleteDoc(doc($firestore as any, col, item.id))
   }
   reportedItems.value = reportedItems.value.filter(i => i.id !== item.id)
+}
+
+function askDeleteTopic(id: string, closeDrawer = false) {
+  if (!isSuperAdmin.value) return
+  deletePayload.value = { type: 'topic', id, closeDrawer }
+  deleteModalTitle.value = "Supprimer ce sujet définitivement ?"
+  deleteModalOpen.value = true
+}
+
+function askDeleteReply(topicId: string, replyId: string) {
+  if (!isSuperAdmin.value) return
+  deletePayload.value = { type: 'reply', topicId, replyId }
+  deleteModalTitle.value = "Supprimer cette réponse ?"
+  deleteModalOpen.value = true
+}
+
+function askDeleteReported(item: any) {
+  if (!isSuperAdmin.value) return
+  deletePayload.value = { type: 'reported', item }
+  deleteModalTitle.value = "Supprimer ce contenu signalé ?"
+  deleteModalOpen.value = true
+}
+
+async function confirmDeleteAction() {
+  if (!deletePayload.value) return
+  deleting.value = true
+  try {
+    const p = deletePayload.value
+    if (p.type === 'topic') {
+      await deleteTopic(p.id)
+      if (p.closeDrawer) drawer.open = false
+    } else if (p.type === 'reply') {
+      await deleteReply(p.topicId, p.replyId)
+    } else if (p.type === 'reported') {
+      await deleteReportedItem(p.item)
+    }
+    deleteModalOpen.value = false
+  } catch (e: any) {
+    console.error('[Delete]', e)
+    alert("Erreur lors de la suppression.")
+  } finally {
+    deleting.value = false
+    deletePayload.value = null
+  }
 }
 
 onMounted(async () => {

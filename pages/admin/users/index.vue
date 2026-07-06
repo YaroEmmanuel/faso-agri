@@ -56,6 +56,7 @@
               <th class="text-left px-6 py-3.5 font-semibold hidden lg:table-cell">Rôle</th>
               <th class="text-left px-6 py-3.5 font-semibold hidden lg:table-cell">Inscription</th>
               <th class="text-left px-6 py-3.5 font-semibold">Statut</th>
+              <th class="text-right px-6 py-3.5 font-semibold">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -91,9 +92,31 @@
                   {{ user.status === 'disabled' ? 'Désactivé' : 'Actif' }}
                 </span>
               </td>
+              <td class="px-6 py-4 text-right">
+                <button
+                  v-if="isSuperAdmin && user.id !== currentUserId"
+                  @click="askDeleteUser(user.id)"
+                  class="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition inline-flex items-center justify-center"
+                  title="Supprimer l'utilisateur"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
+                </button>
+                <button
+                  v-else
+                  disabled
+                  class="text-gray-300 p-2 rounded-lg cursor-not-allowed inline-flex items-center justify-center"
+                  :title="user.id === currentUserId ? 'Vous ne pouvez pas supprimer votre propre compte' : 'Seul un super admin peut supprimer'"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
+                </button>
+              </td>
             </tr>
             <tr v-if="filteredUsers.length === 0">
-              <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-400">Aucun utilisateur trouvé.</td>
+              <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-400">Aucun utilisateur trouvé.</td>
             </tr>
           </tbody>
         </table>
@@ -114,6 +137,14 @@
       </div>
 
     </div>
+
+    <AdminConfirmModal
+      :isOpen="deleteModalOpen"
+      :loading="deleting"
+      title="Supprimer l'utilisateur ?"
+      @close="deleteModalOpen = false"
+      @confirm="confirmDeleteUser"
+    />
   </AdminLayout>
 </template>
 
@@ -121,6 +152,8 @@
 const { $firestore } = useNuxtApp()
 definePageMeta({ middleware: 'admin' })
 useSeoMeta({ title: 'Utilisateurs — Admin Faso Agri' })
+
+const { isSuperAdmin, currentUserId } = useAdminAuth()
 
 const PAGE_SIZE = 20
 const users      = ref<any[]>([])
@@ -134,6 +167,10 @@ const loadError  = ref('')
 const search       = ref('')
 const filterRegion = ref('')
 const filterRole   = ref('')
+
+const deleteModalOpen = ref(false)
+const userToDelete = ref<string | null>(null)
+const deleting = ref(false)
 
 // Map Flutter user fields → display-friendly object
 function mapUser(id: string, data: any) {
@@ -215,6 +252,32 @@ async function fetchPage(after?: any) {
   }
 }
 
+function askDeleteUser(id: string) {
+  if (id === currentUserId.value || !isSuperAdmin.value) return
+  userToDelete.value = id
+  deleteModalOpen.value = true
+}
+
+async function confirmDeleteUser() {
+  if (!userToDelete.value || !$firestore) return
+  
+  deleting.value = true
+  try {
+    const { doc, deleteDoc } = await import('firebase/firestore')
+    const fs = $firestore as any
+    await deleteDoc(doc(fs, 'users', userToDelete.value))
+    users.value = users.value.filter(u => u.id !== userToDelete.value)
+    totalCount.value = Math.max(0, totalCount.value - 1)
+    deleteModalOpen.value = false
+  } catch (e: any) {
+    console.error('[Users Delete]', e)
+    alert(e?.message || 'Erreur lors de la suppression.')
+  } finally {
+    deleting.value = false
+    userToDelete.value = null
+  }
+}
+
 async function nextPage() { if (!lastDoc.value) return; page.value++; await fetchPage(lastDoc.value) }
 async function prevPage() { if (page.value <= 1) return; page.value--; await fetchPage() }
 
@@ -228,5 +291,7 @@ function exportCsv() {
   URL.revokeObjectURL(url)
 }
 
-onMounted(() => fetchPage())
+onMounted(() => {
+  fetchPage()
+})
 </script>

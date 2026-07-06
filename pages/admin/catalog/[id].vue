@@ -48,7 +48,18 @@
                 </svg>
                 Modifier
               </button>
-              <button @click="deleteItem" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-red-200 rounded-xl text-red-500 hover:bg-red-50 transition">
+              <button
+                v-if="isSuperAdmin"
+                @click="askDeleteItem" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-red-200 rounded-xl text-red-500 hover:bg-red-50 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+                Supprimer
+              </button>
+              <button
+                v-else
+                disabled
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-200 rounded-xl text-gray-300 cursor-not-allowed transition" title="Seul un super admin peut supprimer">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                 </svg>
@@ -149,6 +160,14 @@
       </div>
     </Teleport>
 
+    <AdminConfirmModal
+      :isOpen="deleteModalOpen"
+      :loading="deleting"
+      title="Supprimer cet élément ?"
+      @close="deleteModalOpen = false"
+      @confirm="confirmDeleteItem"
+    />
+
   </AdminLayout>
 </template>
 
@@ -158,6 +177,8 @@ const route  = useRoute()
 const router = useRouter()
 definePageMeta({ middleware: 'admin' })
 
+const { isSuperAdmin } = useAdminAuth()
+
 const id = route.params.id as string
 
 const item      = ref<any>(null)
@@ -165,6 +186,9 @@ const loading   = ref(false)
 const loadError = ref('')
 const editorOpen = ref(false)
 const saving     = ref(false)
+
+const deleteModalOpen = ref(false)
+const deleting = ref(false)
 
 // Détecter si c'est un produit ou une annonce
 const isProduct = computed(() => item.value && !item.value.type && !!item.value.category
@@ -231,8 +255,13 @@ async function saveEdit() {
   }
 }
 
-async function deleteItem() {
-  if (!confirm('Supprimer cet élément définitivement ?')) return
+function askDeleteItem() {
+  if (!isSuperAdmin.value) return
+  deleteModalOpen.value = true
+}
+
+async function confirmDeleteItem() {
+  deleting.value = true
   try {
     if ($firestore) {
       const { doc, deleteDoc } = await import('firebase/firestore')
@@ -242,6 +271,8 @@ async function deleteItem() {
     router.push('/admin/catalog')
   } catch (e: any) {
     alert('Erreur : ' + (e.message ?? 'inconnue'))
+    deleting.value = false
+    deleteModalOpen.value = false
   }
 }
 
