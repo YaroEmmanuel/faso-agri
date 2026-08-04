@@ -65,9 +65,13 @@ const stats = [
 ]
 
 const screenshots = [
-  '/faso-agri/images/screenshot1.jpeg',
-  '/faso-agri/images/screenshot1.jpeg',
-  '/faso-agri/images/screenshot1.jpeg',
+  '/faso-agri/images/screenshot1.png',
+  '/faso-agri/images/screenshot2.png',
+  '/faso-agri/images/screenshot3.png',
+  '/faso-agri/images/screenshot4.png',
+  '/faso-agri/images/screenshot5.png',
+  '/faso-agri/images/screenshot6.png',
+
 ]
 
 const currentIndex = ref(0)
