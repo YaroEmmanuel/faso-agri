@@ -17,13 +17,9 @@
           votre téléphone, partout au Burkina Faso.
         </p>
 
-        <a
-          href="/faso-agri/downloads/faso-agri-beta.apk"
-          download="faso-agri-beta.apk"
-          class="inline-block bg-primary text-white px-7 py-3 rounded-lg text-base font-medium hover:bg-secondary transition-colors duration-300"
-        >
-          Télécharger gratuitement
-        </a>
+        <p class="text-gray-500 text-sm">
+          Télécharger gratuitement l'apk en bas de page
+        </p>
 
         <!-- Stats -->
         <div class="flex gap-8 pt-6 mt-6 border-t border-gray-100">

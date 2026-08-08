@@ -23,8 +23,8 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2"/>
           </svg>
           <div class="text-left">
-            <div class="text-[10px] text-gray-500">Télécharger l'</div>
-            <div class="text-sm font-semibold">APK direct</div>
+            <div class="text-[10px] text-gray-500">Télécharger</div>
+            <div class="text-sm font-semibold">Faso Agri</div>
           </div>
         </a>
 
