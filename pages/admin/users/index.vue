@@ -97,7 +97,8 @@
                   v-if="isSuperAdmin && user.id !== currentUserId"
                   @click="askDeleteUser(user.id)"
                   class="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition inline-flex items-center justify-center"
-                  title="Supprimer l'utilisateur"
+                  :title="user.status === 'disabled' ? 'Utilisateur déjà désactivé' : 'Désactiver l\'utilisateur'"
+                  :disabled="user.status === 'disabled'"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -141,7 +142,8 @@
     <AdminConfirmModal
       :isOpen="deleteModalOpen"
       :loading="deleting"
-      title="Supprimer l'utilisateur ?"
+      title="Désactiver l'utilisateur ?"
+      message="Le compte sera désactivé. L'utilisateur ne pourra plus se connecter, mais ses données seront conservées."
       @close="deleteModalOpen = false"
       @confirm="confirmDeleteUser"
     />
@@ -263,15 +265,16 @@ async function confirmDeleteUser() {
   
   deleting.value = true
   try {
-    const { doc, deleteDoc } = await import('firebase/firestore')
+    const { doc, updateDoc } = await import('firebase/firestore')
     const fs = $firestore as any
-    await deleteDoc(doc(fs, 'users', userToDelete.value))
-    users.value = users.value.filter(u => u.id !== userToDelete.value)
-    totalCount.value = Math.max(0, totalCount.value - 1)
+    await updateDoc(doc(fs, 'users', userToDelete.value), { status: 'disabled' })
+    // Mettre à jour le statut localement au lieu de retirer l'utilisateur
+    const idx = users.value.findIndex(u => u.id === userToDelete.value)
+    if (idx !== -1) users.value[idx].status = 'disabled'
     deleteModalOpen.value = false
   } catch (e: any) {
-    console.error('[Users Delete]', e)
-    alert(e?.message || 'Erreur lors de la suppression.')
+    console.error('[Users Disable]', e)
+    alert(e?.message || 'Erreur lors de la désactivation.')
   } finally {
     deleting.value = false
     userToDelete.value = null

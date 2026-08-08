@@ -6,8 +6,8 @@
 
       <div class="flex gap-4 justify-center flex-wrap">
 
-        <!-- Google Play -->
-        <a href="#" class="bg-white px-5 py-3 rounded-xl flex items-center gap-2.5 hover:opacity-90 transition-opacity">
+        <!-- Google Play (masqué - non disponible) -->
+        <!-- <a href="#" class="bg-white px-5 py-3 rounded-xl flex items-center gap-2.5 hover:opacity-90 transition-opacity">
           <svg class="w-6 h-6" viewBox="0 0 24 24" fill="black">
             <path d="M3 20.5v-17l18 8.5-18 8.5z"/>
           </svg>
@@ -15,12 +15,12 @@
             <div class="text-[10px] text-gray-500">Disponible sur</div>
             <div class="text-sm font-semibold">Google Play</div>
           </div>
-        </a>
+        </a> -->
 
         <!-- APK direct -->
-        <a href="/downloads/faso-agri-beta.apk" download="faso-agri-beta.apk" class="bg-white px-5 py-3 rounded-xl flex items-center gap-2.5 hover:opacity-90 transition-opacity">
+        <a href="/faso-agri/downloads/faso-agri-beta.apk" download="faso-agri-beta.apk" class="bg-white px-5 py-3 rounded-xl flex items-center gap-2.5 hover:opacity-90 transition-opacity">
           <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="1.5">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2"/>
           </svg>
           <div class="text-left">
             <div class="text-[10px] text-gray-500">Télécharger l'</div>

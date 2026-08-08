@@ -8,7 +8,7 @@
         <h1 class="text-primary text-6xl font-semibold leading-tight mb-1">Faso Agri</h1>
 
         <p class="text-secondary text-2xl font-medium mb-5 leading-snug">
-          Vendez, achetez et interagisseez avec les acteurs des secteurs agro-pastoraux.<br>Depuis votre localité.
+          Vendez, achetez et interagissez avec les acteurs des secteurs agro-pastoraux.<br>Depuis votre localité.
         </p>
 
         <p class="text-gray-500 text-md leading-relaxed mb-7">
@@ -17,9 +17,13 @@
           votre téléphone, partout au Burkina Faso.
         </p>
 
-        <button class="bg-primary text-white px-7 py-3 rounded-lg text-base font-medium hover:bg-secondary transition-colors duration-300">
+        <a
+          href="/faso-agri/downloads/faso-agri-beta.apk"
+          download="faso-agri-beta.apk"
+          class="inline-block bg-primary text-white px-7 py-3 rounded-lg text-base font-medium hover:bg-secondary transition-colors duration-300"
+        >
           Télécharger gratuitement
-        </button>
+        </a>
 
         <!-- Stats -->
         <div class="flex gap-8 pt-6 mt-6 border-t border-gray-100">
