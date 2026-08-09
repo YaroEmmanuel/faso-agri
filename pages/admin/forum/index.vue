@@ -280,6 +280,16 @@
             >
               {{ drawer.topic?.status === 'closed' ? 'Rouvrir' : 'Fermer' }}
             </button>
+            <!-- Modifier -->
+            <button
+              @click="openTopicEditor(drawer.topic)"
+              class="px-3 py-2 text-sm border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition"
+            >
+              <span class="flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                Modifier
+              </span>
+            </button>
             <div class="flex-1" />
             <button
               v-if="isSuperAdmin"
@@ -307,6 +317,52 @@
       @close="deleteModalOpen = false"
       @confirm="confirmDeleteAction"
     />
+
+    <!-- Modal édition topic (depuis le drawer) -->
+    <Teleport to="body">
+      <div v-if="topicEditorOpen" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4" @click.self="topicEditorOpen = false">
+        <div class="bg-white rounded-2xl w-full max-w-xl shadow-2xl max-h-[90vh] flex flex-col">
+
+          <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+            <h2 class="font-semibold text-gray-900 text-sm">Modifier la discussion</h2>
+            <button @click="topicEditorOpen = false" class="text-gray-400 hover:text-gray-600 transition">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+
+          <div class="overflow-y-auto flex-1 px-6 py-5 space-y-4">
+            <div>
+              <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Titre</label>
+              <input v-model="editorForm.title" type="text" class="w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Contenu</label>
+              <textarea v-model="editorForm.content" rows="6" class="w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition resize-none" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Catégorie</label>
+              <input v-model="editorForm.category" type="text" class="w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Statut</label>
+              <select v-model="editorForm.status" class="w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition">
+                <option value="open">Ouvert</option>
+                <option value="closed">Fermé</option>
+                <option value="pinned">Épinglé</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="px-6 py-4 border-t border-gray-100 flex gap-3 flex-shrink-0">
+            <button @click="topicEditorOpen = false" type="button" class="px-4 py-2 text-sm border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition">Annuler</button>
+            <button @click="saveTopicEdit" :disabled="topicSaving" class="flex-1 px-4 py-2 text-sm bg-primary text-white rounded-xl hover:opacity-90 transition disabled:opacity-50">
+              {{ topicSaving ? 'Enregistrement…' : 'Enregistrer' }}
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </Teleport>
 
   </AdminLayout>
 </template>
@@ -365,6 +421,50 @@ const deleteModalOpen = ref(false)
 const deleting = ref(false)
 const deleteModalTitle = ref("Supprimer cet élément ?")
 const deletePayload = ref<any>(null)
+
+// ── Topic Editor (depuis le drawer) ─────────────────────────────────────────
+const topicEditorOpen = ref(false)
+const topicSaving = ref(false)
+const editingTopic = ref<any>(null)
+const editorForm = reactive({ title: '', content: '', category: '', status: 'open' })
+
+function openTopicEditor(topic: any) {
+  if (!topic) return
+  editingTopic.value = topic
+  editorForm.title    = topic.title ?? ''
+  editorForm.content  = topic.content ?? ''
+  editorForm.category = topic.category ?? ''
+  editorForm.status   = topic.status ?? 'open'
+  topicEditorOpen.value = true
+}
+
+async function saveTopicEdit() {
+  if (!editingTopic.value) return
+  topicSaving.value = true
+  try {
+    const payload = {
+      title: editorForm.title,
+      content: editorForm.content,
+      category: editorForm.category,
+      status: editorForm.status
+    }
+    if ($firestore) {
+      const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore')
+      await updateDoc(doc($firestore as any, 'discussions', editingTopic.value.id), { ...payload, updatedAt: serverTimestamp() })
+    }
+    // Mettre à jour l'objet local
+    Object.assign(editingTopic.value, payload)
+    // Si c'est le topic du drawer ouvert, mettre à jour aussi
+    if (drawer.topic?.id === editingTopic.value.id) {
+      Object.assign(drawer.topic, payload)
+    }
+    topicEditorOpen.value = false
+  } catch (e: any) {
+    alert('Erreur : ' + (e.message ?? 'inconnue'))
+  } finally {
+    topicSaving.value = false
+  }
+}
 
 // ── Drawer ──────────────────────────────────────────────────────────────────
 const drawer = reactive({

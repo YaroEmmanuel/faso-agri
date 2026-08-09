@@ -73,6 +73,16 @@
             <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Description</h2>
             <p class="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{{ item.description }}</p>
           </div>
+
+          <!-- Image -->
+          <div v-if="item.imageBase64 || item.imageUrl" class="pt-3 border-t border-gray-50">
+            <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Image</h2>
+            <img
+              :src="item.imageBase64 ? (item.imageBase64.startsWith('data:') ? item.imageBase64 : `data:image/jpeg;base64,${item.imageBase64}`) : item.imageUrl"
+              class="w-full max-h-64 object-cover rounded-xl border border-gray-100"
+              alt="Image du produit"
+            />
+          </div>
         </div>
       </div>
 
@@ -138,6 +148,19 @@
               </div>
             </div>
             <div>
+              <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Image</label>
+              <div class="space-y-3">
+                <div v-if="form.imagePreview" class="relative w-full h-40">
+                  <img :src="form.imagePreview" class="w-full h-full object-cover rounded-xl border" />
+                  <button @click="clearImage" type="button" class="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full hover:bg-black/70">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                  </button>
+                </div>
+                <input type="file" ref="imageFileInput" @change="onImageFileChange" accept="image/*" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20" />
+                <input v-model="form.imageUrl" @input="onImageUrlInput" type="text" placeholder="Ou coller une URL d'image" class="w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50" />
+              </div>
+            </div>
+            <div>
               <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Statut</label>
               <select v-model="form.status" class="w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition">
                 <option value="active">Actif</option>
@@ -195,7 +218,38 @@ const isProduct = computed(() => item.value && !item.value.type && !!item.value.
   || (item.value && ['production_vegetale','production_animale','production_halieutique','intrants_agricoles','produits_veterinaires','aliments','equipements','autre'].includes(item.value.category)))
 const collection_name = computed(() => isProduct.value ? 'products' : 'announcements')
 
-const form = reactive({ title: '', description: '', price: '', category: '', type: '', status: 'active' })
+const form = reactive({ title: '', description: '', price: '', category: '', type: '', status: 'active',
+  imageBase64: '' as string, imageUrl: '' as string, imagePreview: '' as string, imageFile: null as File | null })
+
+const imageFileInput = ref<HTMLInputElement | null>(null)
+
+function onImageFileChange(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  form.imageFile = file
+  form.imageUrl = ''
+  const reader = new FileReader()
+  reader.onload = (ev) => {
+    form.imagePreview = ev.target?.result as string
+    form.imageBase64 = (ev.target?.result as string).split(',')[1] ?? ''
+  }
+  reader.readAsDataURL(file)
+}
+
+function onImageUrlInput() {
+  form.imageFile = null
+  form.imageBase64 = ''
+  form.imagePreview = form.imageUrl
+  if (imageFileInput.value) imageFileInput.value.value = ''
+}
+
+function clearImage() {
+  form.imageFile = null
+  form.imageBase64 = ''
+  form.imageUrl = ''
+  form.imagePreview = ''
+  if (imageFileInput.value) imageFileInput.value.value = ''
+}
 
 function formatDate(ts: any) {
   if (!ts) return '—'
@@ -227,6 +281,16 @@ function openEditor() {
   form.category    = item.value?.category ?? ''
   form.type        = item.value?.type ?? ''
   form.status      = item.value?.status ?? 'active'
+  form.imageBase64 = item.value?.imageBase64 ?? ''
+  form.imageUrl    = item.value?.imageUrl ?? ''
+  form.imageFile   = null
+  if (item.value?.imageBase64) {
+    form.imagePreview = item.value.imageBase64.startsWith('data:') ? item.value.imageBase64 : `data:image/jpeg;base64,${item.value.imageBase64}`
+  } else if (item.value?.imageUrl) {
+    form.imagePreview = item.value.imageUrl
+  } else {
+    form.imagePreview = ''
+  }
   editorOpen.value = true
 }
 
@@ -236,6 +300,15 @@ async function saveEdit() {
     const payload: any = { title: form.title, description: form.description, price: form.price, status: form.status }
     if (isProduct.value) payload.category = form.category
     else payload.type = form.type
+
+    // Gestion de l'image
+    if (form.imageBase64) {
+      payload.imageBase64 = form.imageBase64
+      payload.imageUrl = ''
+    } else if (form.imageUrl) {
+      payload.imageUrl = form.imageUrl
+      payload.imageBase64 = ''
+    }
 
     if ($firestore) {
       const { doc, updateDoc } = await import('firebase/firestore')

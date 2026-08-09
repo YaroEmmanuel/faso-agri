@@ -42,9 +42,18 @@
               </p>
             </div>
             <div class="flex gap-2 flex-shrink-0">
+              <!-- Modifier -->
+              <button @click="openEditor" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+                Modifier
+              </button>
+              <!-- Fermer/Rouvrir -->
               <button @click="closeTopic" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition">
                 {{ topic.status === 'closed' ? 'Rouvrir' : 'Fermer' }}
               </button>
+              <!-- Supprimer -->
               <button @click="deleteTopic" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-red-200 rounded-xl text-red-500 hover:bg-red-50 transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -94,6 +103,55 @@
       </div>
 
     </div>
+
+    <!-- Modal édition du topic -->
+    <Teleport to="body">
+      <div v-if="editorOpen" class="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4" @click.self="editorOpen = false">
+        <div class="bg-white rounded-2xl w-full max-w-xl shadow-2xl max-h-[90vh] flex flex-col">
+
+          <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+            <h2 class="font-semibold text-gray-900 text-sm">Modifier la discussion</h2>
+            <button @click="editorOpen = false" class="text-gray-400 hover:text-gray-600 transition">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="overflow-y-auto flex-1 px-6 py-5 space-y-4">
+            <div>
+              <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Titre</label>
+              <input v-model="form.title" type="text" class="w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Contenu</label>
+              <textarea v-model="form.content" rows="6" class="w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition resize-none" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Catégorie</label>
+              <input v-model="form.category" type="text" class="w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Statut</label>
+              <select v-model="form.status" class="w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition">
+                <option value="open">Ouvert</option>
+                <option value="closed">Fermé</option>
+                <option value="pinned">Épinglé</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="px-6 py-4 border-t border-gray-100 flex gap-3 flex-shrink-0">
+            <button @click="editorOpen = false" type="button" class="px-4 py-2 text-sm border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition">Annuler</button>
+            <button @click="saveEdit" :disabled="saving" class="flex-1 px-4 py-2 text-sm bg-primary text-white rounded-xl hover:opacity-90 transition disabled:opacity-50">
+              {{ saving ? 'Enregistrement…' : 'Enregistrer' }}
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </Teleport>
+
   </AdminLayout>
 </template>
 
@@ -110,11 +168,40 @@ const replies       = ref<any[]>([])
 const loading       = ref(false)
 const repliesLoading = ref(false)
 const loadError     = ref('')
+const editorOpen    = ref(false)
+const saving        = ref(false)
+
+const form = reactive({ title: '', content: '', category: '', status: 'open' })
 
 function formatDate(ts: any) {
   if (!ts) return '—'
   const d = ts.toDate ? ts.toDate() : new Date(ts)
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+function openEditor() {
+  form.title    = topic.value?.title ?? ''
+  form.content  = topic.value?.content ?? ''
+  form.category = topic.value?.category ?? ''
+  form.status   = topic.value?.status ?? 'open'
+  editorOpen.value = true
+}
+
+async function saveEdit() {
+  saving.value = true
+  try {
+    const payload = { title: form.title, content: form.content, category: form.category, status: form.status }
+    if ($firestore) {
+      const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore')
+      await updateDoc(doc($firestore as any, 'discussions', id), { ...payload, updatedAt: serverTimestamp() })
+    }
+    Object.assign(topic.value, payload)
+    editorOpen.value = false
+  } catch (e: any) {
+    alert('Erreur : ' + (e.message ?? 'inconnue'))
+  } finally {
+    saving.value = false
+  }
 }
 
 async function closeTopic() {

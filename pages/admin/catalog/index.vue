@@ -83,7 +83,8 @@
               <td class="px-6 py-4">
                 <div class="flex items-center gap-3">
                   <div class="w-10 h-10 rounded-xl bg-gray-100 flex-shrink-0 overflow-hidden flex items-center justify-center border border-gray-100/80">
-                    <img v-if="item.imageBase64" :src="`data:image/jpeg;base64,${item.imageBase64}`" class="w-full h-full object-cover" alt="" />
+                    <img v-if="item.imageBase64" :src="getImageSrc(item)" class="w-full h-full object-cover" alt="" />
+                    <img v-else-if="item.imageUrl" :src="item.imageUrl" class="w-full h-full object-cover" alt="" />
                     <svg v-else class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                     </svg>
@@ -330,6 +331,45 @@
               </div>
             </div>
 
+            <!-- Image -->
+            <div>
+              <label class="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Image</label>
+
+              <!-- Prévisualisation -->
+              <div v-if="editForm.imagePreview" class="mb-2 relative w-full h-36 rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+                <img :src="editForm.imagePreview" class="w-full h-full object-cover" alt="Aperçu" />
+                <button
+                  type="button"
+                  @click="clearImage"
+                  class="absolute top-2 right-2 bg-white/90 hover:bg-white text-red-500 rounded-lg p-1 shadow-sm transition"
+                  title="Retirer l'image"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </div>
+
+              <!-- Upload fichier -->
+              <label class="flex items-center gap-2 w-full px-3 py-2 text-sm rounded-xl border border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 cursor-pointer transition text-slate-500">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                <span>{{ editForm.imageFile ? editForm.imageFile.name : 'Choisir une image…' }}</span>
+                <input ref="imageFileInput" type="file" accept="image/*" class="hidden" @change="onImageFileChange" />
+              </label>
+
+              <!-- OU URL -->
+              <div class="flex items-center gap-2 mt-2">
+                <div class="flex-1 h-px bg-slate-200" />
+                <span class="text-[10px] text-slate-400 uppercase tracking-wide">ou URL</span>
+                <div class="flex-1 h-px bg-slate-200" />
+              </div>
+              <input
+                v-model="editForm.imageUrl"
+                type="url"
+                placeholder="https://…"
+                class="mt-2 w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
+                @input="onImageUrlInput"
+              />
+            </div>
+
             <!-- Footer buttons -->
             <div class="pt-4 border-t border-slate-100 flex justify-end gap-3">
               <button
@@ -409,8 +449,50 @@ const editForm = reactive({
   category: '',
   type: '',
   province: '',
-  status: 'active'
+  status: 'active',
+  imageBase64: '' as string,
+  imageUrl: '' as string,
+  imagePreview: '' as string,
+  imageFile: null as File | null,
 })
+
+const imageFileInput = ref<HTMLInputElement | null>(null)
+
+function getImageSrc(item: any): string {
+  if (item.imageBase64) {
+    // Support both prefixed (data:...) and raw base64
+    return item.imageBase64.startsWith('data:') ? item.imageBase64 : `data:image/jpeg;base64,${item.imageBase64}`
+  }
+  return item.imageUrl ?? ''
+}
+
+function onImageFileChange(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  editForm.imageFile = file
+  editForm.imageUrl = ''
+  const reader = new FileReader()
+  reader.onload = (ev) => {
+    editForm.imagePreview = ev.target?.result as string
+    editForm.imageBase64 = (ev.target?.result as string).split(',')[1] ?? ''
+  }
+  reader.readAsDataURL(file)
+}
+
+function onImageUrlInput() {
+  editForm.imageFile = null
+  editForm.imageBase64 = ''
+  editForm.imagePreview = editForm.imageUrl
+  if (imageFileInput.value) imageFileInput.value.value = ''
+}
+
+function clearImage() {
+  editForm.imageFile = null
+  editForm.imageBase64 = ''
+  editForm.imageUrl = ''
+  editForm.imagePreview = ''
+  if (imageFileInput.value) imageFileInput.value.value = ''
+}
 
 function openEditor(item: any) {
   editingItem.value = item
@@ -421,6 +503,17 @@ function openEditor(item: any) {
   editForm.type = item.type || ''
   editForm.province = item.province || item.location || ''
   editForm.status = item.status || 'active'
+  editForm.imageBase64 = item.imageBase64 || ''
+  editForm.imageUrl = item.imageUrl || ''
+  editForm.imageFile = null
+  // Build preview from existing data
+  if (item.imageBase64) {
+    editForm.imagePreview = item.imageBase64.startsWith('data:') ? item.imageBase64 : `data:image/jpeg;base64,${item.imageBase64}`
+  } else if (item.imageUrl) {
+    editForm.imagePreview = item.imageUrl
+  } else {
+    editForm.imagePreview = ''
+  }
   editorOpen.value = true
 }
 
@@ -446,6 +539,15 @@ async function saveItem() {
   } else {
     payload.type = editForm.type
     payload.location = editForm.province
+  }
+
+  // Gestion de l'image
+  if (editForm.imageBase64) {
+    payload.imageBase64 = editForm.imageBase64
+    payload.imageUrl = ''
+  } else if (editForm.imageUrl) {
+    payload.imageUrl = editForm.imageUrl
+    payload.imageBase64 = ''
   }
 
   try {
