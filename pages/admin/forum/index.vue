@@ -369,6 +369,7 @@
 
 <script setup lang="ts">
 const { $firestore } = useNuxtApp()
+const route = useRoute()
 definePageMeta({ middleware: 'admin' })
 useSeoMeta({ title: 'Forum — Admin Faso Agri' })
 
@@ -667,6 +668,16 @@ onMounted(async () => {
   onUnmounted(() => {
     window.removeEventListener('keydown', handleKeyDown)
   })
+
+  // Auto-ouvrir l'éditeur si ?editId= est présent dans l'URL (depuis le drawer du dashboard)
+  const editId = route.query.editId as string | undefined
+  if (editId) {
+    const target = topics.value.find((t: any) => t.id === editId)
+    if (target) {
+      await openDrawer(target)
+      openTopicEditor(target)
+    }
+  }
 })
 </script>
 

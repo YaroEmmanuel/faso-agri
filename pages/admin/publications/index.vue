@@ -333,6 +333,7 @@
 
 <script setup lang="ts">
 const { $firestore } = useNuxtApp()
+const route = useRoute()
 definePageMeta({ middleware: 'admin' })
 useSeoMeta({ title: 'Infos Pratiques — Admin Faso Agri' })
 
@@ -660,5 +661,13 @@ onMounted(async () => {
   onUnmounted(() => {
     window.removeEventListener('keydown', handleKeyDown)
   })
+
+  // Auto-ouvrir l'éditeur si ?editId= est présent dans l'URL (depuis le drawer du dashboard)
+  const editId = route.query.editId as string | undefined
+  if (editId) {
+    // Attendre que les données soient chargées puis ouvrir l'éditeur
+    const target = infos.value.find((i: any) => i.id === editId)
+    if (target) openEditor(target)
+  }
 })
 </script>

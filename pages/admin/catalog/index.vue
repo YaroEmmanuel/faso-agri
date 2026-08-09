@@ -108,41 +108,104 @@
               </td>
               <td class="px-6 py-4 text-right">
                 <div class="flex items-center justify-end gap-1.5">
-                  <button
-                    v-if="item.status === 'pending'"
-                    @click="updateItemStatus(item, 'active')"
-                    title="Approuver & Activer"
-                    class="p-1.5 rounded-lg hover:bg-green-50 text-gray-400 hover:text-green-600 transition"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                  </button>
-                  <button
-                    v-if="item.status === 'active' && activeTab === 'products'"
-                    @click="updateItemStatus(item, 'inactive')"
-                    title="Désactiver"
-                    class="p-1.5 rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-600 transition"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
-                    </svg>
-                  </button>
-                  <button
-                    v-if="item.status === 'active' && activeTab === 'announcements'"
-                    @click="updateItemStatus(item, 'expired')"
-                    title="Marquer comme expiré"
-                    class="p-1.5 rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-600 transition"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                  </button>
-                  <button @click="openEditor(item)" title="Modifier" class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition">
+
+                  <!-- ── Marché agricole : toggle actif / inactif ── -->
+                  <template v-if="activeTab === 'products'">
+                    <!-- Activer (si inactif / pending / autre) -->
+                    <button
+                      v-if="item.status !== 'active'"
+                      @click="updateItemStatus(item, 'active')"
+                      title="Activer"
+                      class="p-1.5 rounded-lg hover:bg-green-50 text-gray-400 hover:text-green-600 transition"
+                    >
+                      <!-- PlayCircle -->
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                        <polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/>
+                      </svg>
+                    </button>
+                    <!-- Désactiver (si actif) -->
+                    <button
+                      v-else
+                      @click="updateItemStatus(item, 'inactive')"
+                      title="Désactiver"
+                      class="p-1.5 rounded-lg hover:bg-orange-50 text-gray-400 hover:text-orange-500 transition"
+                    >
+                      <!-- PauseCircle -->
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                        <line x1="10" y1="8" x2="10" y2="16" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="14" y1="8" x2="14" y2="16" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                    </button>
+                  </template>
+
+                  <!-- ── Événements : toggle actif/inactif + bouton expiration ── -->
+                  <template v-if="activeTab === 'announcements'">
+                    <!-- Réactiver si expiré ou inactif -->
+                    <button
+                      v-if="item.status !== 'active'"
+                      @click="updateItemStatus(item, 'active')"
+                      title="Activer l'annonce"
+                      class="p-1.5 rounded-lg hover:bg-green-50 text-gray-400 hover:text-green-600 transition"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                        <polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/>
+                      </svg>
+                    </button>
+                    <!-- Désactiver si actif -->
+                    <button
+                      v-else
+                      @click="updateItemStatus(item, 'inactive')"
+                      title="Désactiver l'annonce"
+                      class="p-1.5 rounded-lg hover:bg-orange-50 text-gray-400 hover:text-orange-500 transition"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                        <line x1="10" y1="8" x2="10" y2="16" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="14" y1="8" x2="14" y2="16" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                    </button>
+                    <!-- Marquer expiré (si pas déjà expiré) -->
+                    <button
+                      v-if="item.status !== 'expired' && item.status !== 'ended'"
+                      @click="updateItemStatus(item, 'expired')"
+                      title="Marquer comme expiré"
+                      class="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition"
+                    >
+                      <!-- CalendarX / expiration -->
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <rect x="3" y="4" width="18" height="18" rx="2" stroke-width="2"/>
+                        <line x1="16" y1="2" x2="16" y2="6" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="8" y1="2" x2="8" y2="6" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/>
+                        <line x1="9" y1="14" x2="15" y2="20" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="15" y1="14" x2="9" y2="20" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                    </button>
+                    <!-- Réactiver si expiré (bouton rotatif) -->
+                    <button
+                      v-else
+                      @click="updateItemStatus(item, 'active')"
+                      title="Réactiver (annuler l'expiration)"
+                      class="p-1.5 rounded-lg hover:bg-green-50 text-gray-400 hover:text-green-600 transition"
+                    >
+                      <!-- RotateCCW -->
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <polyline points="1 4 1 10 7 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M3.51 15a9 9 0 1 0 .49-4.5" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                    </button>
+                  </template>
+
+                  <!-- Modifier -->
+                  <button @click="openEditor(item)" title="Modifier" class="p-1.5 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                     </svg>
                   </button>
+                  <!-- Supprimer -->
                   <button
                     v-if="isSuperAdmin"
                     @click="askDeleteItem(item)" title="Supprimer" class="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition">
@@ -406,6 +469,7 @@
 
 <script setup lang="ts">
 const { $firestore } = useNuxtApp()
+const route = useRoute()
 definePageMeta({ middleware: 'admin' })
 useSeoMeta({ title: 'Catalogue — Admin Faso Agri' })
 
@@ -742,8 +806,15 @@ function exportCsv() {
 }
 
 watch(activeTab, () => { search.value = ''; filterCategory.value = ''; filterStatus.value = ''; filterProvince.value = ''; loadItems() })
-onMounted(() => {
-  loadItems()
+onMounted(async () => {
+  // Lire le query param ?tab= pour activer le bon onglet (depuis le drawer du dashboard)
+  const tabParam = route.query.tab as string | undefined
+  if (tabParam === 'announcements' || tabParam === 'products') {
+    activeTab.value = tabParam
+  }
+
+  await loadItems()
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       closeEditor()
@@ -753,5 +824,12 @@ onMounted(() => {
   onUnmounted(() => {
     window.removeEventListener('keydown', handleKeyDown)
   })
+
+  // Auto-ouvrir l'éditeur si ?editId= est présent dans l'URL
+  const editId = route.query.editId as string | undefined
+  if (editId) {
+    const target = items.value.find((i: any) => i.id === editId)
+    if (target) openEditor(target)
+  }
 })
 </script>

@@ -93,25 +93,38 @@
                 </span>
               </td>
               <td class="px-6 py-4 text-right">
+                <!-- Toggle activer / désactiver (super admin seulement, sauf soi-même) -->
                 <button
                   v-if="isSuperAdmin && user.id !== currentUserId"
-                  @click="askDeleteUser(user.id)"
-                  class="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition inline-flex items-center justify-center"
-                  :title="user.status === 'disabled' ? 'Utilisateur déjà désactivé' : 'Désactiver l\'utilisateur'"
-                  :disabled="user.status === 'disabled'"
+                  @click="askToggleUser(user)"
+                  :title="user.status === 'disabled' ? 'Réactiver le compte' : 'Désactiver le compte'"
+                  :class="user.status === 'disabled'
+                    ? 'text-green-600 hover:text-green-700 hover:bg-green-50'
+                    : 'text-orange-500 hover:text-orange-700 hover:bg-orange-50'"
+                  class="p-2 rounded-lg transition inline-flex items-center justify-center"
                 >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  <!-- Icône UserCheck (réactiver) -->
+                  <svg v-if="user.status === 'disabled'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 12l2 2 4-4" style="transform: translate(-6px, 2px)"/>
+                    <polyline points="17 12 19 14 23 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" style="transform: scale(0.7) translate(10px, 9px)"/>
+                  </svg>
+                  <!-- Icône UserX (désactiver) -->
+                  <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h11a7 7 0 00-4-6.33"/>
+                    <line x1="17" y1="17" x2="22" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="22" y1="17" x2="17" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                   </svg>
                 </button>
+                <!-- Bouton disabled si pas superAdmin ou propre compte -->
                 <button
                   v-else
                   disabled
                   class="text-gray-300 p-2 rounded-lg cursor-not-allowed inline-flex items-center justify-center"
-                  :title="user.id === currentUserId ? 'Vous ne pouvez pas supprimer votre propre compte' : 'Seul un super admin peut supprimer'"
+                  :title="user.id === currentUserId ? 'Vous ne pouvez pas modifier votre propre statut' : 'Seul un super admin peut modifier le statut'"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                   </svg>
                 </button>
               </td>
@@ -142,10 +155,12 @@
     <AdminConfirmModal
       :isOpen="deleteModalOpen"
       :loading="deleting"
-      title="Désactiver l'utilisateur ?"
-      message="Le compte sera désactivé. L'utilisateur ne pourra plus se connecter, mais ses données seront conservées."
+      :title="toggleAction === 'disable' ? 'Désactiver l\'utilisateur ?' : 'Réactiver l\'utilisateur ?'"
+      :message="toggleAction === 'disable'
+        ? 'Le compte sera désactivé. L\'utilisateur ne pourra plus se connecter, mais ses données seront conservées.'
+        : 'Le compte sera réactivé. L\'utilisateur pourra à nouveau se connecter à la plateforme.'"
       @close="deleteModalOpen = false"
-      @confirm="confirmDeleteUser"
+      @confirm="confirmToggleUser"
     />
   </AdminLayout>
 </template>
@@ -171,7 +186,8 @@ const filterRegion = ref('')
 const filterRole   = ref('')
 
 const deleteModalOpen = ref(false)
-const userToDelete = ref<string | null>(null)
+const userToToggle = ref<string | null>(null)
+const toggleAction = ref<'enable' | 'disable'>('disable')
 const deleting = ref(false)
 
 // Map Flutter user fields → display-friendly object
@@ -254,30 +270,32 @@ async function fetchPage(after?: any) {
   }
 }
 
-function askDeleteUser(id: string) {
-  if (id === currentUserId.value || !isSuperAdmin.value) return
-  userToDelete.value = id
+function askToggleUser(user: any) {
+  if (user.id === currentUserId.value || !isSuperAdmin.value) return
+  userToToggle.value = user.id
+  toggleAction.value = user.status === 'disabled' ? 'enable' : 'disable'
   deleteModalOpen.value = true
 }
 
-async function confirmDeleteUser() {
-  if (!userToDelete.value || !$firestore) return
-  
+async function confirmToggleUser() {
+  if (!userToToggle.value || !$firestore) return
+
+  const newStatus = toggleAction.value === 'disable' ? 'disabled' : 'active'
   deleting.value = true
   try {
     const { doc, updateDoc } = await import('firebase/firestore')
     const fs = $firestore as any
-    await updateDoc(doc(fs, 'users', userToDelete.value), { status: 'disabled' })
-    // Mettre à jour le statut localement au lieu de retirer l'utilisateur
-    const idx = users.value.findIndex(u => u.id === userToDelete.value)
-    if (idx !== -1) users.value[idx].status = 'disabled'
+    await updateDoc(doc(fs, 'users', userToToggle.value), { status: newStatus })
+    // Mettre à jour le statut localement
+    const idx = users.value.findIndex(u => u.id === userToToggle.value)
+    if (idx !== -1) users.value[idx].status = newStatus
     deleteModalOpen.value = false
   } catch (e: any) {
-    console.error('[Users Disable]', e)
-    alert(e?.message || 'Erreur lors de la désactivation.')
+    console.error('[Users Toggle Status]', e)
+    alert(e?.message || 'Erreur lors du changement de statut.')
   } finally {
     deleting.value = false
-    userToDelete.value = null
+    userToToggle.value = null
   }
 }
 

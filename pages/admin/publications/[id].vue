@@ -173,7 +173,7 @@
               <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Contenu</label>
               <textarea v-model="form.content" rows="6" class="w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition resize-none" />
             </div>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-3 gap-3">
               <div>
                 <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Catégorie</label>
                 <select v-model="form.category" class="w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition">
@@ -185,6 +185,14 @@
               <div>
                 <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Auteur</label>
                 <input v-model="form.author" type="text" class="w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition" />
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Statut</label>
+                <select v-model="form.status" class="w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition">
+                  <option value="published">Publié</option>
+                  <option value="draft">Brouillon</option>
+                  <option value="archived">Archivé</option>
+                </select>
               </div>
             </div>
             <div class="grid grid-cols-2 gap-3">
@@ -281,7 +289,9 @@ const deleteModalOpen = ref(false)
 const deleting = ref(false)
 
 const form = reactive({
-  title: '', description: '', content: '', category: '', author: '', tagsInput: '', readMinutes: 3,
+  title: '', description: '', content: '', category: '', author: '',
+  status: 'published' as string,
+  tagsInput: '', readMinutes: 3,
   imageBase64: '' as string, imageUrl: '' as string, imagePreview: '' as string, imageFile: null as File | null
 })
 
@@ -362,6 +372,7 @@ function openEditor() {
   form.content     = info.value?.content ?? ''
   form.category    = info.value?.category ?? ''
   form.author      = info.value?.author ?? ''
+  form.status      = info.value?.status ?? 'published'
   form.tagsInput   = (info.value?.tags ?? []).join(', ')
   form.readMinutes = info.value?.readMinutes ?? 3
   form.imageBase64 = info.value?.imageBase64 ?? ''
@@ -381,7 +392,11 @@ async function saveEdit() {
   saving.value = true
   try {
     const tags = form.tagsInput.split(',').map((t: string) => t.trim()).filter(Boolean)
-    const payload: any = { title: form.title, description: form.description, content: form.content, category: form.category, author: form.author, tags, readMinutes: form.readMinutes }
+    const payload: any = {
+      title: form.title, description: form.description, content: form.content,
+      category: form.category, author: form.author, tags,
+      readMinutes: form.readMinutes, status: form.status
+    }
 
     // Gestion de l'image
     if (form.imageBase64) {
